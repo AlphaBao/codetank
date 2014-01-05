@@ -54,7 +54,7 @@ Jx().$package(function(J) {
     };
 
     // 处理坦克开炮
-    this.fire = function(distance, angleToTurn) {
+    this.smartFire = function(distance, angleToTurn) {
       this.infighting = true;
 
       // If it's close enough, fire!
@@ -207,7 +207,7 @@ Jx().$package(function(J) {
 
       if (Math.abs(angleToTurn) <= 3) {
         if (this.getGunHeat() === 0) {
-          po.fire(e.getDistance(), angleToTurn);
+          po.smartFire(e.getDistance(), angleToTurn);
         }
       }
 
@@ -233,7 +233,6 @@ Jx().$package(function(J) {
       var angle=e.getBearing()-(this.getGunHeading()-this.getHeading());
       this.turnGun(angle);
       this.fire(3);
-      this.back(50);
       this.say("宜将剩勇追穷寇！", "blue");
     },
 
