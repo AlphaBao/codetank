@@ -89,9 +89,6 @@ Jx().$package(function(J) {
       // 下次转动的角度 -360 ~ 360
       // tank.turn(nextDeg) 正数顺时针旋转，负数逆时针旋转
       var nextDeg = Math.ceil(Math.random(47) * 720) - 360;
-      
-      // 停止移动
-      tank.stopMove();
 
       // 当前朝向
       // return 0 ~ 360
