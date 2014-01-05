@@ -52,17 +52,23 @@ Jx().$package(function(J) {
       return this.smartTurn((angleGunToTurn + tank.getHeading() - tank.getGunHeading()) % 360);
     };
 
-    this.fire = function(distance) {
-      if (distance < 50) {
-        this.infighting = true;
-      }
+    this.fire = function(distance, angleToTurn) {
+      this.infighting = true;
 
-      if (distance > 200 || tank.getEnergy() < 15) {
-        tank.fire(1);
-      } else if (distance > 50) {
-        tank.fire(2);
+      // If it's close enough, fire!
+      if (Math.abs(angleToTurn) <= 3) {
+        tank.stopMove();
+        tank.turnGunLeft(angleToTurn);
+
+        // We check gun heat here, because calling fire()
+        // uses a turn, which could cause us to lose track
+        // of the other robot.
+        if (tank.getGunHeat() === 0) {
+          tank.fire( Math.min(3 - Math.abs(angleToTurn), tank.getEnergy() - 0.1) );
+        }
       } else {
-        tank.fire(3);
+        tank.stopMove();
+        tank.turnGunLeft(angleToTurn);
       }
     };
 
@@ -70,9 +76,20 @@ Jx().$package(function(J) {
     this.smartMove = function() {
       var that = this;
 
+      if (this.infighting) {
+        tank.turnGunLeft(50, function() {
+          tank.turnGunLeft(-100);
+        });
+      } else {
+        this.infighting = false;
+      }
+
       // 下次转动的角度 -360 ~ 360
       // tank.turn(nextDeg) 正数顺时针旋转，负数逆时针旋转
       var nextDeg = Math.ceil(Math.random(47) * 720) - 360;
+      
+      // 停止移动
+      tank.stopMove();
 
       // 当前朝向
       // return 0 ~ 360
@@ -122,14 +139,16 @@ Jx().$package(function(J) {
       if (nextX >= tankRange && nextX < (fieldX - tankRange) &&
           nextY >= tankRange && nextY < (fieldY - tankRange)) {
 
+
         // 坦克在战场边缘时，走直线（避免撞墙）；否则，走弧线。
         if (nextX < edgeRange || nextX > (fieldX - edgeRange) || 
             nextY < edgeRange || nextY > (fieldY - edgeRange) || 
             posX < edgeRange || posX > (fieldX - edgeRange) || 
             posY < edgeRange || posY > (fieldY - edgeRange)) {
 
-          // debug
-          console.log("直线");
+          // 炮筒与雷达跟随坦克的旋转
+          tank.setAdjustGunForRobotTurn(false);
+          tank.setAdjustRadarForRobotTurn(false);
 
           // 先旋转，再走直线
           tank.turn(nextDeg, function() {
@@ -137,18 +156,18 @@ Jx().$package(function(J) {
           });
         } else {
 
-          // debug
-          console.log("弧线");
+          // 炮筒与雷达独立于坦克的旋转
+          tank.setAdjustGunForRobotTurn(true);
+          tank.setAdjustRadarForRobotTurn(true);
 
           // 同时旋转和移动，走弧线
           tank.setAhead(nextDistance);
           tank.setTurn(nextDeg);
+          tank.setGunTurn( Math.round(Math.random(47) === 1 ? 360 : -360) );
           tank.execute();
         }
       } else {
-        setTimeout(function() {
-          that.smartMove();
-        }, 0);
+        this.smartMove();
       }
     };
   };
@@ -164,13 +183,13 @@ Jx().$package(function(J) {
     run: function() {
       po.initTank(this);
       this.setUI(tank.ui["red"]);
+      this.setScanStyle("purple")
       this.say("大风起兮云飞扬……", "green");
-
-      // debug
-      // this.turnLeft(146 - this.getHeading());
 
       this.loop(function () {
         this.say("对酒当歌，人生几何？", "deepskyblue");
+
+        // po.hunt();
         po.smartMove();
       });
     },
@@ -181,44 +200,32 @@ Jx().$package(function(J) {
     onScannedRobot: function(e) {
       var angleToTurn = po.angleToTurn(e.getBearing());
 
-      if (Math.abs(angleToTurn) <= 3) {
-        this.stopMove();
-        this.turnGunLeft(angleToTurn);
+      this.say("一剑霜寒十四州！", "red");
+      this.stopMove();
+      this.turnGunLeft(angleToTurn);
 
+      if (Math.abs(angleToTurn) <= 3) {
         if (this.getGunHeat() === 0) {
-          po.fire(e.getDistance());
+          po.fire(e.getDistance(), angleToTurn);
         }
-      } else {
-        this.stopMove();
-        this.turnGunLeft(angleToTurn);
       }
 
       this.scan();
-      this.say("一剑霜寒十四州！", "red");
     },
 
     /**
     *被子弹击中的处理程序
     **/ 
     onHitByBullet:function(e){
-      if (po.infighting) {
-        po.infighting = false;
-      } else {
-        this.setAdjustGunForRobotTurn(true);
-        this.setAhead(100);
 
-        this.setTurn(60, function () {
-          this.setTurn(-120, function () {
-            this.setTurn(240, function () {
-              this.setTurn(-120);
-              this.execute();
-            });
-            this.execute();
-          });
-          this.execute();
-        });
-        this.execute();
-        this.setAdjustGunForRobotTurn(false);
+      if (po.infighting) {
+        console.log("infighting!");
+        po.infighting = false;
+        this.stopMove();
+        this.scan();
+      } else {
+        console.log("----------!");
+        po.smartMove();
       }
 
       this.say("风萧萧兮易水寒！", "orange");
@@ -229,21 +236,17 @@ Jx().$package(function(J) {
       this.turnGun(angle);
       this.fire(3);
       this.back(50);
-      this.say("宜将剩勇追穷寇！", "blue")
+      this.say("宜将剩勇追穷寇！", "blue");
     },
 
     onHitWall:function(e){
-
-      // if(e.getBearing()<=90&&e.getBearing()>-90)
-      //   this.back(40);
-      // else
-      //   this.ahead(40);
-      this.say("悠然见南山……", "yellow")
+      po.smartMove();
+      this.say("悠然见南山……", "yellow");
 
       // debug
       console.log("heading: " + this.getHeading());
-      console.log(po.nextX + " " + po.posX)
-      console.log(po.nextY + " " + po.posY)
+      console.log(po.nextX + " " + po.posX);
+      console.log(po.nextY + " " + po.posY);
       console.log("nextDistance: " + po.nextDistance);
     },
 
