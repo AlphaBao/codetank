@@ -1,5 +1,6 @@
 // tianfangye.com
 Jx().$package(function(J) {
+
   var Pistachio = function() {
     // 坦克
     var tank;
@@ -22,6 +23,10 @@ Jx().$package(function(J) {
     // 安全距离：与战场边界的距离
     var edgeRange;
 
+    // 战斗状态标识
+    this.infighting = false;
+
+    // 初始化参数
     this.initTank = function(robot) {
       tank = robot;
 
@@ -35,23 +40,20 @@ Jx().$package(function(J) {
       edgeRange = Math.max(Math.min(fieldX, fieldY) / 10, tankRange * 4.5);
     }
 
-    this.dist = Math.round(Math.random(47) * 200);
+    // 工具方法，处理火炮旋转角度
+    this.angleToTurn = function(angleGunToTurn) {
+      var angle = (angleGunToTurn + tank.getHeading() - tank.getGunHeading()) % 360;
 
-    this.infighting = false;
-
-    this.smartTurn = function(angle) {
       if (angle > 180) {
         angle = angle - 360;
       } else if (angle < -180) {
         angle = angle + 360;
       }
-      return angle;
+
+      return angle;      
     };
 
-    this.angleToTurn = function(angleGunToTurn) {
-      return this.smartTurn((angleGunToTurn + tank.getHeading() - tank.getGunHeading()) % 360);
-    };
-
+    // 处理坦克开炮
     this.fire = function(distance, angleToTurn) {
       this.infighting = true;
 
@@ -72,7 +74,7 @@ Jx().$package(function(J) {
       }
     };
 
-    // 随机移动，不撞墙
+    // 智能移动
     this.smartMove = function() {
       var that = this;
 
@@ -128,12 +130,12 @@ Jx().$package(function(J) {
       }
 
       // debug
-      this.heading = positiveDeg;
-      this.posX = posX;
-      this.posY = posY;
-      this.nextX = nextX;
-      this.nextY = nextY;
-      this.nextDistance = nextDistance;
+      // this.heading = positiveDeg;
+      // this.posX = posX;
+      // this.posY = posY;
+      // this.nextX = nextX;
+      // this.nextY = nextY;
+      // this.nextDistance = nextDistance;
 
       // 检查坐标是否超出战场范围
       if (nextX >= tankRange && nextX < (fieldX - tankRange) &&
@@ -167,6 +169,8 @@ Jx().$package(function(J) {
           tank.execute();
         }
       } else {
+
+        // 坐标超出安全范围，重新处理
         this.smartMove();
       }
     };
@@ -177,26 +181,23 @@ Jx().$package(function(J) {
   Robot = new J.Class({
     extend: tank.Robot
   }, {
-    /*
-    robot主函数
-    */
+
+    // 坦克的运动入口方法，该方法启动坦克的运动
     run: function() {
+
+      // 用this传入扩展后的tank.Robot
       po.initTank(this);
       this.setUI(tank.ui["red"]);
-      this.setScanStyle("purple")
       this.say("大风起兮云飞扬……", "green");
 
+      // 让运动循环执行
       this.loop(function () {
         this.say("对酒当歌，人生几何？", "deepskyblue");
-
-        // po.hunt();
         po.smartMove();
       });
     },
 
-    /*
-    看到其他robot的处理程序
-    */
+    // 发现其他坦克
     onScannedRobot: function(e) {
       var angleToTurn = po.angleToTurn(e.getBearing());
 
@@ -213,24 +214,21 @@ Jx().$package(function(J) {
       this.scan();
     },
 
-    /**
-    *被子弹击中的处理程序
-    **/ 
+    // 被子弹击中
     onHitByBullet:function(e){
 
       if (po.infighting) {
-        console.log("infighting!");
         po.infighting = false;
         this.stopMove();
         this.scan();
       } else {
-        console.log("----------!");
         po.smartMove();
       }
 
       this.say("风萧萧兮易水寒！", "orange");
     },
 
+    // 与其他坦克碰撞
     onHitRobot:function(e){
       var angle=e.getBearing()-(this.getGunHeading()-this.getHeading());
       this.turnGun(angle);
@@ -239,17 +237,19 @@ Jx().$package(function(J) {
       this.say("宜将剩勇追穷寇！", "blue");
     },
 
+    // 撞墙
     onHitWall:function(e){
       po.smartMove();
       this.say("悠然见南山……", "yellow");
 
       // debug
-      console.log("heading: " + this.getHeading());
-      console.log(po.nextX + " " + po.posX);
-      console.log(po.nextY + " " + po.posY);
-      console.log("nextDistance: " + po.nextDistance);
+      // console.log("heading: " + this.getHeading());
+      // console.log(po.nextX + " " + po.posX);
+      // console.log(po.nextY + " " + po.posY);
+      // console.log("nextDistance: " + po.nextDistance);
     },
 
+    // 战斗胜利
     onWin:function(){
       this.say("十步杀一人，千里不留行。事了拂衣去，深藏身与名。", "red");
       this.turn(3600);
