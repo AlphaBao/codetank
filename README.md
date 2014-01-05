@@ -9,4 +9,4 @@ Pistachio：适合 1 VS 1。
 
 主要是处理了坦克的智能移动。
 
-[详细说明](http://tianfangye.com/2014/01/03/codetank-pistachio/)
+[详细说明](http://tianfangye.com/2014/01/05/codetank-pistachio/)
