@@ -215,9 +215,10 @@ Jx().$package(function(J) {
     onHitByBullet:function(e){
 
       if (po.infighting) {
-        po.infighting = false;
         this.stopMove();
-        this.scan();
+        this.scan(function() {
+          po.infighting = false;
+        });
       } else {
         po.smartMove();
       }
