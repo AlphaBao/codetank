@@ -26,6 +26,12 @@ Jx().$package(function(J) {
     // 战斗状态标识
     this.infighting = false;
 
+    // 用于维护战斗状态的定时器
+    this.infightingTimer = null;
+
+    // 扫描到敌方坦克
+    this.scanned = false;
+
     // 初始化参数
     this.initTank = function(robot) {
       tank = robot;
@@ -40,50 +46,52 @@ Jx().$package(function(J) {
       edgeRange = Math.max(Math.min(fieldX, fieldY) / 10, tankRange * 4.5);
     }
 
-    // 工具方法，处理火炮旋转角度
-    this.angleToTurn = function(angleGunToTurn) {
-      var angle = (angleGunToTurn + tank.getHeading() - tank.getGunHeading()) % 360;
-
-      if (angle > 180) {
-        angle = angle - 360;
-      } else if (angle < -180) {
-        angle = angle + 360;
-      }
-
-      return angle;      
-    };
-
     // 处理坦克开炮
-    this.smartFire = function(distance, angleToTurn) {
+    this.smartFire = function(e) {
+      var that = this;
+      this.scanned = true;
       this.infighting = true;
+      tank.stopMove();
 
-      // If it's close enough, fire!
-      if (Math.abs(angleToTurn) <= 3) {
-        tank.stopMove();
-        tank.turnGunLeft(angleToTurn);
+      var angleToTurn = (e.getBearing() + tank.getHeading() - tank.getGunHeading()) % 360;
 
-        // We check gun heat here, because calling fire()
-        // uses a turn, which could cause us to lose track
-        // of the other robot.
-        if (tank.getGunHeat() === 0) {
-          tank.fire( Math.min(3 - Math.abs(angleToTurn), tank.getEnergy() - 0.1) );
-        }
-      } else {
-        tank.stopMove();
-        tank.turnGunLeft(angleToTurn);
+      if (angleToTurn > 180) {
+        angleToTurn = angleToTurn - 360;
+      } else if (angleToTurn < -180) {
+        angleToTurn = angleToTurn + 360;
       }
+
+      tank.turnGunLeft(angleToTurn);
+
+      if (Math.abs(angleToTurn) <= 3 && tank.getGunHeat() === 0) {
+        tank.fire( Math.min(3 - Math.abs(angleToTurn), tank.getEnergy() - 0.1), function() {
+          that.scanned = false;
+        });
+      }
+
+      tank.scan();
+
+      if (this.infightingTimer) {
+        clearTimeout(this.infightingTimer);
+      }
+
+      this.infightingTimer = setTimeout(function() {
+        that.scanned = false;
+        that.infighting = false;
+      }, 300);
     };
 
     // 智能移动
     this.smartMove = function() {
       var that = this;
 
-      if (this.infighting) {
+      // 停止现有的移动
+      tank.stopMove();
+
+      if (this.infighting) {      
         tank.turnGunLeft(50, function() {
           tank.turnGunLeft(-100);
         });
-      } else {
-        this.infighting = false;
       }
 
       // 下次转动的角度 -360 ~ 360
@@ -189,36 +197,24 @@ Jx().$package(function(J) {
 
       // 让运动循环执行
       this.loop(function () {
+        this.turnGunRight(10, function() {          
+          po.smartMove();
+        });
+
         this.say("对酒当歌，人生几何？", "deepskyblue");
-        po.smartMove();
       });
     },
 
     // 发现其他坦克
     onScannedRobot: function(e) {
-      var angleToTurn = po.angleToTurn(e.getBearing());
-
+      po.smartFire(e);
       this.say("一剑霜寒十四州！", "red");
-      this.stopMove();
-      this.turnGunLeft(angleToTurn);
-
-      if (Math.abs(angleToTurn) <= 3) {
-        if (this.getGunHeat() === 0) {
-          po.smartFire(e.getDistance(), angleToTurn);
-        }
-      }
-
-      this.scan();
     },
 
     // 被子弹击中
     onHitByBullet:function(e){
-
-      if (po.infighting) {
-        this.stopMove();
-        this.scan(function() {
-          po.infighting = false;
-        });
+      if (po.scanned) {
+        this.scan();
       } else {
         po.smartMove();
       }
