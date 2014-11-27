@@ -44,7 +44,7 @@ Jx().$package(function(J) {
 
       tankRange = Math.max(tankX, tankY) / 2 + 5;
       edgeRange = Math.max(Math.min(fieldX, fieldY) / 10, tankRange * 4.5);
-    }
+    };
 
     // 处理坦克开炮
     this.smartFire = function(e) {
@@ -118,7 +118,7 @@ Jx().$package(function(J) {
       var offsetY = tankY / 2 + Math.abs(nextDistance * Math.sin(rad));
 
       // 正数角度，表示朝向
-      var positiveDeg = deg < 0 ? deg + 360 : deg
+      var positiveDeg = deg < 0 ? deg + 360 : deg;
 
       // 计算下一次到达的坐标 X
       if (positiveDeg < 90 || positiveDeg > 270) {
@@ -192,7 +192,7 @@ Jx().$package(function(J) {
 
       // 用this传入扩展后的tank.Robot
       po.initTank(this);
-      this.setUI(tank.ui["red"]);
+      this.setUI(tank.ui.red);
       this.say("大风起兮云飞扬……", "green");
 
       // 让运动循环执行
