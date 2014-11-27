@@ -13,6 +13,7 @@
     "url": "https://github.com/AlphaBao/codetank.git"
   },
   "author": "AlphaBao",
+  "homepage": "https://github.com/AlphaBao/codetank",
   "licenses": [
     {
       "type" : "MIT",
@@ -22,5 +23,7 @@
   "bugs": {
     "url": "https://github.com/AlphaBao/codetank/issues"
   },
-  "homepage": "https://github.com/AlphaBao/codetank"
+  "scripts": {
+      "test": "grunt"
+  }
 }
